@@ -1,0 +1,50 @@
+course_number,course_title,department,description,credits,avg_gpa,elective_category,interest_tags,recommended_semester
+CH301,General Chemistry I,CH,"First semester general chemistry for science and engineering students, covering atomic structure, bonding, stoichiometry, and thermochemistry.",3,3.1,Science,"materials|energy",1
+M408D,Calculus II,M,"Calculus sequence covering series, vectors, partial derivatives, and multiple integrals.",4,2.9,Math,"modeling|analysis",1
+CS303E,Intro to Programming,CS,"Introduction to problem solving, algorithms, and programming in an object-oriented language.",3,3.4,Computing,"computing|robotics|data",1
+M427J,Differential Equations with Linear Algebra,M,"Differential equations, matrices, eigenvalues, and engineering applications.",4,3.0,Math,"modeling|controls|analysis",2
+ME302,Introduction to Engineering Design and Graphics,ME,"Orientation to mechanical engineering problem solving, design process, and professional tools.",3,3.4,ME Core,"design|manufacturing",2
+EM306,Statics,EM,"Forces, moments, equilibrium, and engineering analysis of rigid bodies.",3,2.8,ME Core,"structures|analysis",2
+CS313E,Software Design and Data Structures,CS,"Data structures and software design patterns used for larger technical programs.",3,3.3,Computing,"computing|data",2
+UGS303,First-Year Signature Course,UGS,"Seminar-style course emphasizing critical thinking, writing, and interdisciplinary exploration.",3,3.6,General Education,"communication",2
+ME316T,Thermodynamics,ME,"Properties, heat and work, the first and second laws of thermodynamics, thermodynamic processes, and introduction to ideal power cycles.",3,3.2,ME Core,"thermal|energy",3
+EM319,Mechanics of Solids,EM,"Stress, strain, deformation, torsion, and failure concepts for engineering materials and structures.",3,2.9,ME Core,"structures|materials",3
+ME318M,Programming and Engineering Computational Methods,ME,"Applied numerical analysis, programming of computational algorithms using mathematical software, and applications of computational methods to mechanical engineering problems.",3,3.1,ME Core,"computing|data|analysis",3
+M427L,Advanced Calculus for Applications,M,"Multivariable methods and mathematical tools used in applied engineering analysis.",4,2.9,Math,"analysis|modeling",3
+ES333T,Engineering Communication,ES,"Technical communication, presentations, reports, and collaboration for engineering teams.",3,3.5,General Education,"communication|leadership",3
+ME130L,Experimental Fluid Mechanics,ME,"Experimental design concepts, uncertainty analysis, and systems analysis as applied to thermodynamics, fluid mechanics, and heat transfer systems.",1,3.6,ME Lab,"thermal|analysis",4
+ME330,Fluid Mechanics,ME,"Fluid properties, conservation laws, internal and external flow, and engineering fluid systems.",3,2.8,ME Core,"thermal|energy|analysis",4
+ME314D,Dynamics,ME,"Kinematics and kinetics of particles and rigid bodies with engineering applications.",3,2.7,ME Core,"robotics|controls|analysis",4
+ME335,Engineering Statistics,ME,"Fundamentals of probability, distribution theory, data analysis and statistics, interval estimation, hypothesis testing, and statistical quality control.",3,2.9,ME Core,"data|analysis",4
+ME134L,Materials Engineering Laboratory,ME,"Hands-on experiments in materials science and engineering topics and microstructure-property relationships discussed in Materials Engineering.",1,3.5,ME Lab,"materials|analysis",5
+ME334,Materials Engineering,ME,"Fundamental aspects of the structure, properties, and behavior of engineering materials.",3,3.0,ME Core,"materials|structures",5
+ME338,Machine Elements,ME,"Analysis for the design and manufacture of basic mechanical elements and their role in the design of machines.",3,3.2,ME Core,"design|structures",5
+ME139L,Experimental Heat Transfer,ME,"Experimental design concepts, uncertainty analysis, and systems analysis as applied to thermodynamics, fluid mechanics, and heat transfer systems.",1,3.5,ME Lab,"thermal|analysis",5
+ME339,Heat Transfer,ME,"Conduction, convection, radiation, and heat exchanger fundamentals.",3,2.9,ME Core,"thermal|energy",5
+ME340,Mechatronics,ME,"Circuits, sensors, actuators, feedback, and integration of electronics with mechanical systems.",3,3.1,ME Core,"controls|robotics|design",5
+ME140L,Mechatronics Laboratory,ME,"Laboratory work in electronics, instrumentation, and electromechanical system integration.",1,3.6,ME Lab,"controls|robotics",5
+ME353,Engineering Finance,ME,"Evaluating the financial impact of engineering decisions, comparing alternatives with cash flow analysis, and managing project risk.",3,3.4,ME Core,"leadership|analysis",6
+ME365D,Data Science for Engineers,ME,"Regression, classification, trees, neural networks, and data-driven engineering analysis.",3,3.4,Gateway Elective,"data|computing|controls",6
+ME350R,Robot Mechanism Design,ME,"Analysis and synthesis of motions of mechanisms used to design robotic systems across industrial, spatial, and medical applications.",3,3.3,Gateway Elective,"robotics|controls|design",7
+CS327E,Databases,CS,"Database design, relational modeling, SQL, integrity, security, and transactional systems.",3,3.3,Gateway Elective,"data|computing",6
+ME344,Dynamic Systems and Controls,ME,"Lumped physical system models; electrical, fluid, mechanical, and thermal system analysis; linear system transient and steady-state behavior; introduction to feedback control.",3,3.0,ME Core,"controls|analysis|robotics",6
+ME144L,Dynamic Systems and Controls Laboratory,ME,"Modeling of engineering systems, digital simulation, system identification, frequency response, feedback control principles, and hands-on experimentation.",1,3.6,ME Lab,"controls|analysis",6
+ME337C,Introduction to Nuclear Power Systems,ME,"Radioactivity, nuclear interactions, fission and fusion, fission reactors, nuclear power systems, and nuclear power safety.",3,3.2,Gateway Elective,"energy|thermal",7
+ME343,Thermal-Fluid Systems,ME,"Analysis and design of integrated systems involving simultaneous application of thermodynamics, heat transfer, and fluid mechanics.",3,3.1,Gateway Elective,"thermal|energy|design",7
+ME378E,Nanotechnology for Sustainable Energy,ME,"Nanoscale materials and their role in sustainable energy applications.",3,3.3,Gateway Elective,"energy|materials",7
+ME336P,Concepts in Nuclear and Radiation Engineering,ME,"Introduces the many different aspects and applications of nuclear and radiation engineering with introductory laboratory exposure.",3,3.2,Gateway Elective,"energy|materials",7
+ME337F,Nuclear Environmental Protection,ME,"Ionizing radiation, decay, dose measurement, transport, waste management, and safeguards.",3,3.1,Gateway Elective,"energy|materials",7
+ME336,Materials Processing,ME,"Effects of processing on materials properties and materials selection for engineering applications.",3,3.0,Gateway Elective,"materials|manufacturing",7
+ME349,Corrosion Engineering,ME,"Corrosion principles; electrochemical, environmental, and metallurgical effects; types of corrosion; corrosion testing and prevention.",3,3.2,Gateway Elective,"materials|manufacturing",7
+ME350,Machine Tool Operations for Engineers,ME,"Hands-on manual and computer-numerical-controlled machine tool operation, part design, and tool selection for production.",3,3.1,Gateway Elective,"manufacturing|design",7
+ME379N,Engineering Acoustics,ME,"Principles of acoustics with applications drawn from audio engineering, biomedical ultrasound, industrial acoustics, noise control, and underwater sound.",3,3.3,Gateway Elective,"analysis|design",7
+ME368C,Additive Manufacturing,ME,"Study of additive manufacturing technologies, rapid prototyping, digital manufacturing workflows, and the engineering challenges associated with AM.",3,3.2,Gateway Elective,"manufacturing|design|computing",7
+ME371D,Medical Device Design and Manufacturing,ME,"Systematic design thinking and manufacturing practices for solving medical device problems and communicating engineering decisions clearly.",3,3.3,Gateway Elective,"design|leadership",7
+ES277,Engineering Internship,ES,"Experiential learning credit for engineering internship participation.",2,3.8,Experiential,"leadership|professional",7
+ES277K,Engineering Coop I,ES,"Structured cooperative engineering work experience with reflection.",2,3.8,Experiential,"professional|leadership",7
+ES277L,Engineering Coop II,ES,"Advanced cooperative engineering work experience continuation.",2,3.8,Experiential,"professional|leadership",8
+ME364L,Automatic Control System Design,ME,"Feedback principles, controller design, and industrial compensator methods for continuous and discrete-time control systems.",3,3.3,Gateway Elective,"controls|analysis",7
+ME366L,Operations Research Models,ME,"Formulation and solution of operations research models requiring optimization, simulation, and stochastic system analysis.",3,3.4,Gateway Elective,"data|computing|analysis",7
+ME369P,Application Programming for Engineers,ME,"Introduction to Python programming for engineering system modeling, simulation, data analysis, and software development.",3,3.4,Gateway Elective,"computing|data|design",7
+ME354M,Biomechanics of Human Movement,ME,"Modeling and simulation of human movement, neuromuscular control, and experimental techniques for biomechanics.",3,3.2,Gateway Elective,"robotics|analysis",7
+ME379M,Special Topics in Mechanical Engineering,ME,"Special topics course that can cover emerging mechanical engineering themes.",3,3.3,Gateway Elective,"robotics|energy|manufacturing",8
