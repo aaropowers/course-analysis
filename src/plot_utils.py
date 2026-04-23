@@ -283,17 +283,17 @@ def render_timeline_flowchart(
                 line={"color": "#2D3748", "width": 1.4},
                 layer="below",
             )
-            subtitle = compact_title(getattr(row, "course_title", "") or "", width=18, max_lines=3)
+            subtitle = compact_title(getattr(row, "course_title", "") or "", width=16, max_lines=2)
             fig.add_annotation(
                 x=float(x_pos),
                 y=y_pos,
                 text=(
                     f"<b>{row.course_number}</b>"
-                    f"<br><span style='font-size:10px'>{subtitle}</span>"
+                    f"<br><span style='font-size:9px'>{subtitle}</span>"
                 ),
                 showarrow=False,
                 align="center",
-                font={"size": 12, "color": "white"},
+                font={"size": 11, "color": "white"},
             )
             hover_rows.append(
                 {

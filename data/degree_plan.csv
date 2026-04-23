@@ -22,7 +22,8 @@ ME-11,ME Core,Heat Transfer,ME339,3,TRUE,5
 ME-12,ME Core,Mechatronics,ME340,3,TRUE,5
 ME-13,ME Core,Dynamic Systems and Controls,ME344,3,TRUE,6
 ME-14,ME Core,Engineering Finance,ME353,3,TRUE,6
-ME-15,ME Core,Mechanical Engineering Design Project,ME266K,2,TRUE,8
+ME-15,ME Core,Mechanical Engineering Design Methodology,ME366J,3,TRUE,7
+ME-16,ME Core,Mechanical Engineering Design Project,ME266K,2,TRUE,8
 LAB-1,ME Lab,Experimental Fluid Mechanics,ME130L,1,TRUE,4
 LAB-2,ME Lab,Materials Engineering Laboratory,ME134L,1,TRUE,5
 LAB-3,ME Lab,Experimental Heat Transfer,ME139L,1,TRUE,5

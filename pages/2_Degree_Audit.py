@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import textwrap
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -14,6 +12,13 @@ from src.audit import (
     evaluate_course_dependencies,
     get_locked_courses,
     get_missing_requirements,
+)
+from src.plot_utils import (
+    TIMELINE_STATUS_COLORS,
+    TIMELINE_STATUS_LABELS,
+    add_legend_swatches,
+    compact_title,
+    render_timeline_flowchart,
 )
 from src.utils import (
     build_course_lookup,
@@ -31,28 +36,9 @@ REQUIREMENT_STATUS_COLORS = {
     "Locked": "#A0AEC0",
 }
 
-TRANSCRIPT_STATUS_COLORS = {
-    "completed": "#2F855A",
-    "in_progress": "#D69E2E",
-    "credit_by_exam": "#2B6CB0",
-    "transfer": "#805AD5",
-}
-
-TRANSCRIPT_STATUS_LABELS = {
-    "completed": "Completed (in residence)",
-    "in_progress": "In Progress",
-    "credit_by_exam": "Credit by exam",
-    "transfer": "Transfer credit",
-}
-
-
-def _compact_title(title: str, width: int = 20, max_lines: int = 3) -> str:
-    words = str(title).replace("Introduction to ", "").replace("Engineering ", "Engr ").replace("and", "&")
-    lines = textwrap.wrap(words, width=width)
-    if len(lines) > max_lines:
-        lines = lines[:max_lines]
-        lines[-1] = lines[-1].rstrip(".") + "..."
-    return "<br>".join(lines)
+# Back-compat aliases for any external readers / notebooks that imported these.
+TRANSCRIPT_STATUS_COLORS = TIMELINE_STATUS_COLORS
+TRANSCRIPT_STATUS_LABELS = TIMELINE_STATUS_LABELS
 
 
 def _format_elective_options(allowed_courses_raw: str, catalog_lookup: dict) -> list[str]:
@@ -62,35 +48,6 @@ def _format_elective_options(allowed_courses_raw: str, catalog_lookup: dict) -> 
         title = catalog_lookup.get(code, {}).get("course_title", "")
         lines.append(f"  • {code} - {title}" if title else f"  • {code}")
     return lines
-
-
-def _add_legend_swatches(fig: go.Figure, color_map: dict[str, str], label_map: dict[str, str] | None = None) -> None:
-    """Append visible legend-only markers for each status so the legend stays readable.
-
-    Our rectangle nodes are drawn as plotly shapes, and the hover layer uses
-    transparent scatter markers. Without these dummy traces the legend swatches
-    would inherit the transparent style and disappear, which is what happens in
-    the screenshot from the UI. We place them at ``None`` so nothing renders on
-    the canvas but every entry still appears in the legend.
-    """
-    for status, color in color_map.items():
-        display = (label_map or {}).get(status, status)
-        fig.add_trace(
-            go.Scatter(
-                x=[None],
-                y=[None],
-                mode="markers",
-                marker={
-                    "size": 16,
-                    "color": color,
-                    "line": {"color": "#2D3748", "width": 1.2},
-                    "symbol": "square",
-                },
-                name=display,
-                showlegend=True,
-                hoverinfo="skip",
-            )
-        )
 
 
 def _build_flowchart_figure(progression_df: pd.DataFrame) -> go.Figure:
@@ -111,7 +68,7 @@ def _build_flowchart_figure(progression_df: pd.DataFrame) -> go.Figure:
             if row.matched_course:
                 return f"{slot_label} - {row.matched_course}"
             return slot_label
-        return _compact_title(row.requirement_name)
+        return compact_title(row.requirement_name)
 
     semester_values = sorted(progression_df["recommended_semester"].unique().tolist())
     progression_df = progression_df.copy()
@@ -274,7 +231,7 @@ def _build_flowchart_figure(progression_df: pd.DataFrame) -> go.Figure:
         status: REQUIREMENT_STATUS_COLORS.get(status, "#CBD5E0")
         for status in progression_df["status"].unique().tolist()
     }
-    _add_legend_swatches(fig, statuses_present)
+    add_legend_swatches(fig, statuses_present)
 
     width = max(1700, 220 * max(len(semester_values), 1))
     fig.update_layout(
@@ -295,190 +252,6 @@ def _build_flowchart_figure(progression_df: pd.DataFrame) -> go.Figure:
         legend={
             "title": {
                 "text": "<b>Requirement status</b>",
-                "font": {"color": "#000000", "size": 13},
-            },
-            "bgcolor": "rgba(255,255,255,0.9)",
-            "bordercolor": "#CBD5E0",
-            "borderwidth": 1,
-            "font": {"size": 12, "color": "#1A202C"},
-            "itemsizing": "constant",
-            "yanchor": "top",
-            "y": 1,
-            "xanchor": "left",
-            "x": 1.01,
-        },
-        font={"size": 12},
-    )
-    return fig
-
-
-def _build_transcript_flowchart_figure(transcript_progression_df: pd.DataFrame) -> go.Figure:
-    """Render the student's actual transcript as a term-by-term flowchart."""
-    if transcript_progression_df.empty:
-        fig = go.Figure()
-        fig.update_layout(
-            title="Transcript timeline",
-            height=320,
-            annotations=[
-                {
-                    "text": "No transcript courses available to chart.",
-                    "x": 0.5,
-                    "y": 0.5,
-                    "xref": "paper",
-                    "yref": "paper",
-                    "showarrow": False,
-                    "font": {"size": 14, "color": "#4A5568"},
-                }
-            ],
-        )
-        return fig
-
-    df = transcript_progression_df.copy()
-    ordered_terms = (
-        df[["term_order", "term_label"]]
-        .drop_duplicates()
-        .sort_values("term_order")
-        .reset_index(drop=True)
-    )
-    term_to_x = {row.term_label: idx + 1 for idx, row in ordered_terms.iterrows()}
-    df["x_pos"] = df["term_label"].map(term_to_x)
-
-    max_rows = 0
-    for label in ordered_terms["term_label"]:
-        count = int((df["term_label"] == label).sum())
-        max_rows = max(max_rows, count)
-
-    category_order = {
-        "Math": 1,
-        "Science": 2,
-        "Computing": 3,
-        "General Education": 4,
-        "ME Core": 5,
-        "ME Lab": 6,
-        "Gateway Elective": 7,
-        "Other": 8,
-    }
-    df["_category_rank"] = df["category"].map(category_order).fillna(99)
-    df = df.sort_values(["x_pos", "_category_rank", "course_number"]).reset_index(drop=True)
-
-    node_positions: list[dict] = []
-    hover_rows: list[dict] = []
-    for x_pos in sorted(df["x_pos"].unique()):
-        frame = df[df["x_pos"] == x_pos].reset_index(drop=True)
-        for row_index, row in enumerate(frame.itertuples(), start=0):
-            y_pos = float(max_rows - row_index - 1)
-            node_positions.append({"course": row.course_number, "x": float(x_pos), "y": y_pos, "status": row.status})
-            credit_text = f"{row.credit_hours:g} hrs" if row.credit_hours not in (None, "") and pd.notna(row.credit_hours) else "Credits: n/a"
-            grade_text = f"Grade: {row.grade}" if row.grade else "Grade: in progress"
-            source_text = row.source_type if row.source_type else ""
-            hover_lines = [
-                f"<b>{row.course_number}</b>",
-                row.course_title or "",
-                f"Term: {row.term_label}",
-                f"Status: {TRANSCRIPT_STATUS_LABELS.get(row.status, row.status)}",
-                credit_text,
-                grade_text,
-            ]
-            if source_text:
-                hover_lines.append(f"Source: {source_text}")
-            hover_rows.append(
-                {
-                    "course_number": row.course_number,
-                    "status": row.status,
-                    "x": float(x_pos),
-                    "y": y_pos,
-                    "hover": "<br>".join(filter(None, hover_lines)),
-                }
-            )
-
-    fig = go.Figure()
-    box_half_width = 0.46
-    box_half_height = 0.44
-
-    for label, x_pos in term_to_x.items():
-        fig.add_shape(
-            type="rect",
-            x0=x_pos - 0.5,
-            x1=x_pos + 0.5,
-            y0=-0.7,
-            y1=max_rows - 0.2,
-            fillcolor="#F7FAFC",
-            line={"color": "#E2E8F0", "width": 1},
-            layer="below",
-        )
-        fig.add_annotation(
-            x=x_pos,
-            y=max_rows + 0.2,
-            text=f"<b>{label}</b>",
-            showarrow=False,
-            font={"size": 14, "color": "#1A202C"},
-        )
-
-    for node in node_positions:
-        fill_color = TRANSCRIPT_STATUS_COLORS.get(node["status"], "#CBD5E0")
-        fig.add_shape(
-            type="rect",
-            x0=node["x"] - box_half_width,
-            x1=node["x"] + box_half_width,
-            y0=node["y"] - box_half_height,
-            y1=node["y"] + box_half_height,
-            fillcolor=fill_color,
-            line={"color": "#2D3748", "width": 1.4},
-            layer="below",
-        )
-        course_row = df.loc[df["course_number"] == node["course"]].iloc[0]
-        fig.add_annotation(
-            x=node["x"],
-            y=node["y"],
-            text=(
-                f"<b>{node['course']}</b>"
-                f"<br><span style='font-size:10px'>{_compact_title(course_row['course_title'], width=18, max_lines=3)}</span>"
-            ),
-            showarrow=False,
-            align="center",
-            font={"size": 12, "color": "white"},
-        )
-
-    hover_df = pd.DataFrame(hover_rows)
-    for status, frame in hover_df.groupby("status"):
-        fig.add_trace(
-            go.Scatter(
-                x=frame["x"],
-                y=frame["y"],
-                mode="markers",
-                marker={"size": 42, "opacity": 0, "color": TRANSCRIPT_STATUS_COLORS.get(status, "#CBD5E0")},
-                customdata=frame["hover"],
-                hovertemplate="%{customdata}<extra></extra>",
-                showlegend=False,
-            )
-        )
-
-    statuses_present = {
-        status: TRANSCRIPT_STATUS_COLORS.get(status, "#CBD5E0")
-        for status in df["status"].unique().tolist()
-    }
-    _add_legend_swatches(fig, statuses_present, TRANSCRIPT_STATUS_LABELS)
-
-    term_x_values = list(term_to_x.values())
-    width = max(1700, 220 * max(len(term_x_values), 1))
-    fig.update_layout(
-        height=max(900, 170 * max_rows),
-        width=width,
-        title="Transcript timeline",
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        margin={"l": 30, "r": 200, "t": 80, "b": 30},
-        xaxis={
-            "visible": False,
-            "range": [min(term_x_values) - 0.6, max(term_x_values) + 0.6],
-        },
-        yaxis={
-            "visible": False,
-            "range": [-0.9, max_rows + 0.8],
-        },
-        legend={
-            "title": {
-                "text": "<b>Course status</b>",
                 "font": {"color": "#000000", "size": 13},
             },
             "bgcolor": "rgba(255,255,255,0.9)",
@@ -593,7 +366,12 @@ if map_view == "Degree Requirements View":
         "list of allowed courses on hover. Scroll the chart horizontally if it extends past the page."
     )
 else:
-    transcript_fig = _build_transcript_flowchart_figure(transcript_progression_df)
+    transcript_fig = render_timeline_flowchart(
+        transcript_progression_df,
+        title="Transcript timeline",
+        legend_title="Course status",
+        empty_message="No transcript courses available to chart.",
+    )
     st.plotly_chart(transcript_fig, use_container_width=False)
     st.caption(
         "Each column is a term from your transcript. Boxes are colored by source: in-residence, "

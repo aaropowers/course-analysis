@@ -96,21 +96,41 @@ def _normalize_frame_course_numbers(df: pd.DataFrame, column: str = "course_numb
     return result
 
 
-@lru_cache(maxsize=1)
-def load_catalog() -> pd.DataFrame:
+def _file_mtime(path: Path) -> float:
+    """Return a cache key that changes whenever the file on disk is edited.
+
+    Used by the CSV loaders so Streamlit reruns pick up edits to data files
+    (e.g., ``degree_plan.csv``) without requiring a full server restart.
+    """
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+@lru_cache(maxsize=8)
+def _load_catalog_cached(_mtime: float) -> pd.DataFrame:
     df = pd.read_csv(DATA_DIR / "course_catalog.csv")
     return _normalize_frame_course_numbers(df)
 
 
-@lru_cache(maxsize=1)
-def load_degree_plan() -> pd.DataFrame:
+def load_catalog() -> pd.DataFrame:
+    return _load_catalog_cached(_file_mtime(DATA_DIR / "course_catalog.csv"))
+
+
+@lru_cache(maxsize=8)
+def _load_degree_plan_cached(_mtime: float) -> pd.DataFrame:
     df = pd.read_csv(DATA_DIR / "degree_plan.csv")
     df["required_flag"] = df["required_flag"].astype(str).str.upper().eq("TRUE")
     return df
 
 
-@lru_cache(maxsize=1)
-def load_prereqs() -> pd.DataFrame:
+def load_degree_plan() -> pd.DataFrame:
+    return _load_degree_plan_cached(_file_mtime(DATA_DIR / "degree_plan.csv"))
+
+
+@lru_cache(maxsize=8)
+def _load_prereqs_cached(_mtime: float) -> pd.DataFrame:
     df = pd.read_csv(DATA_DIR / "prereqs.csv")
     df = _normalize_frame_course_numbers(df)
     df["prerequisite_course"] = df["prerequisite_course"].map(normalize_course_number)
@@ -129,18 +149,30 @@ def load_prereqs() -> pd.DataFrame:
     return df
 
 
-@lru_cache(maxsize=1)
-def load_elective_groups() -> pd.DataFrame:
+def load_prereqs() -> pd.DataFrame:
+    return _load_prereqs_cached(_file_mtime(DATA_DIR / "prereqs.csv"))
+
+
+@lru_cache(maxsize=8)
+def _load_elective_groups_cached(_mtime: float) -> pd.DataFrame:
     df = pd.read_csv(DATA_DIR / "elective_groups.csv")
     return _normalize_frame_course_numbers(df)
 
 
-@lru_cache(maxsize=1)
-def load_transcripts() -> pd.DataFrame:
+def load_elective_groups() -> pd.DataFrame:
+    return _load_elective_groups_cached(_file_mtime(DATA_DIR / "elective_groups.csv"))
+
+
+@lru_cache(maxsize=8)
+def _load_transcripts_cached(_mtime: float) -> pd.DataFrame:
     df = pd.read_csv(DATA_DIR / "synthetic_transcripts.csv")
     df = _normalize_frame_course_numbers(df)
     df["grade_points"] = df["grade"].map(GRADE_POINTS)
     return df
+
+
+def load_transcripts() -> pd.DataFrame:
+    return _load_transcripts_cached(_file_mtime(DATA_DIR / "synthetic_transcripts.csv"))
 
 
 def _prepare_coursework_frame(df: pd.DataFrame) -> pd.DataFrame:
