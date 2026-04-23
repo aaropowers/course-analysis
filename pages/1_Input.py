@@ -6,7 +6,7 @@ import streamlit as st
 
 from src.cleaning import build_transcript_from_course_list, parse_transcript
 from src.transcript_pdf import parse_ut_transcript_pdf, to_transcript_dataframe
-from src.utils import load_catalog, load_transcripts, normalize_course_number
+from src.utils import load_catalog, load_transcripts, normalize_course_number, transcript_gpa
 
 
 def _session_transcript_from_pdf(parsed_full_df: pd.DataFrame, parsed_model_df: pd.DataFrame) -> pd.DataFrame:
@@ -45,6 +45,14 @@ def _session_transcript_from_pdf(parsed_full_df: pd.DataFrame, parsed_model_df: 
     return pd.DataFrame(session_rows).reset_index(drop=True)
 
 
+def _save_student_gpa(transcript_df: pd.DataFrame) -> None:
+    computed_gpa = transcript_gpa(transcript_df)
+    if computed_gpa is not None:
+        st.session_state["student_gpa"] = computed_gpa
+    else:
+        st.session_state.pop("student_gpa", None)
+
+
 st.title("Input")
 st.caption("Load one of the prepared demo students, upload a simple CSV, or build a transcript manually.")
 
@@ -61,8 +69,10 @@ with st.expander("Demo scenarios", expanded=True):
     scenario_name = st.selectbox("Select a demo profile", list(scenario_options))
     if st.button("Load demo transcript", type="primary"):
         student_id = scenario_options[scenario_name]
-        st.session_state["transcript_df"] = demo_df[demo_df["student_id"] == student_id].copy()
+        transcript = demo_df[demo_df["student_id"] == student_id].copy()
+        st.session_state["transcript_df"] = transcript
         st.session_state["active_student_id"] = student_id
+        _save_student_gpa(transcript)
         st.success(f"Loaded {scenario_name.lower()} profile.")
 
 with st.expander("Upload transcript CSV", expanded=True):
@@ -74,6 +84,7 @@ with st.expander("Upload transcript CSV", expanded=True):
         st.session_state["transcript_df"] = parsed_df
         st.session_state["active_student_id"] = "uploaded_student"
         st.session_state["invalid_courses"] = invalid_courses
+        _save_student_gpa(parsed_df)
         st.success(f"Loaded {len(parsed_df)} valid completed courses from upload.")
         if invalid_courses:
             st.warning("Ignored unknown courses: " + ", ".join(invalid_courses))
@@ -127,6 +138,7 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
             st.session_state["transcript_df"] = session_df
             st.session_state["active_student_id"] = "pdf_uploaded_student"
             st.session_state["invalid_courses"] = invalid_courses
+            _save_student_gpa(session_df)
             st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
 
 with st.expander("Manual transcript builder", expanded=False):
@@ -137,8 +149,10 @@ with st.expander("Manual transcript builder", expanded=False):
         format_func=lambda course: f"{course} - {catalog_df.loc[catalog_df['course_number'] == course, 'course_title'].iloc[0]}",
     )
     if st.button("Use selected courses"):
-        st.session_state["transcript_df"] = build_transcript_from_course_list(selected_courses)
+        manual_df = build_transcript_from_course_list(selected_courses)
+        st.session_state["transcript_df"] = manual_df
         st.session_state["active_student_id"] = "manual_student"
+        _save_student_gpa(manual_df)
         st.success(f"Saved {len(selected_courses)} completed courses.")
 
 st.subheader("Preferences")
@@ -158,11 +172,14 @@ st.session_state["target_credit_load"] = st.slider(
 
 current_transcript = st.session_state.get("transcript_df", pd.DataFrame()).copy()
 if not current_transcript.empty:
+    _save_student_gpa(current_transcript)
+
+if not current_transcript.empty:
     current_transcript["course_number"] = current_transcript["course_number"].map(normalize_course_number)
     preview_cols = ["course_number", "grade", "term"]
     for extra in ("status", "credit_hours"):
         if extra in current_transcript.columns:
             preview_cols.append(extra)
-    preview = current_transcript[preview_cols].fillna("")
+    preview = current_transcript[[col for col in preview_cols if col in current_transcript.columns]].fillna("")
     st.subheader("Current transcript in session")
     st.dataframe(preview, use_container_width=True, hide_index=True)

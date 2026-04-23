@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import hashlib
 from pathlib import Path
 import re
 
@@ -186,6 +187,29 @@ def term_sort_key(term: str) -> tuple[int, int]:
     year_text, season = str(term).split("-", maxsplit=1)
     season_order = {"SPRING": 1, "SUMMER": 2, "FALL": 3}
     return int(year_text), season_order.get(season.upper(), 9)
+
+
+def dataframe_fingerprint(df: pd.DataFrame, columns: list[str] | None = None) -> str:
+    if df.empty:
+        return "empty"
+
+    frame = df.copy()
+    if columns:
+        available = [column for column in columns if column in frame.columns]
+        if available:
+            frame = frame[available].copy()
+
+    frame = frame.fillna("").sort_index(axis=1)
+    sort_columns = [
+        column
+        for column in ["student_id", "course_number", "term", "year", "semester", "grade"]
+        if column in frame.columns
+    ]
+    if sort_columns:
+        frame = frame.sort_values(sort_columns).reset_index(drop=True)
+
+    hashed = pd.util.hash_pandas_object(frame, index=True).values.tobytes()
+    return hashlib.sha1(hashed).hexdigest()
 
 
 def transcript_gpa(transcript_df: pd.DataFrame) -> float | None:
