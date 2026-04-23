@@ -14,7 +14,7 @@ from src.audit import (
     get_locked_courses,
     get_missing_requirements,
 )
-from src.utils import transcript_gpa
+from src.utils import transcript_completed_hours, transcript_gpa
 
 
 def _compact_title(title: str, width: int = 18, max_lines: int = 2) -> str:
@@ -240,12 +240,21 @@ locked_df = get_locked_courses(transcript_df)
 progression_df, dependency_edges = build_degree_plan_progression(transcript_df)
 dependency_debug_df = evaluate_course_dependencies(transcript_df)
 
-metric_cols = st.columns(4)
+metric_cols = st.columns(5)
 metric_cols[0].metric("Progress", f"{audit_result['progress_percent']}%")
-metric_cols[1].metric("Completed hours", audit_result["completed_hours"])
-metric_cols[2].metric("Remaining requirements", len(missing_df))
+metric_cols[1].metric(
+    "Degree Plan Hours",
+    f"{audit_result['completed_hours']} / {audit_result['total_hours']}",
+)
+metric_cols[2].metric("UT total hours taken", transcript_completed_hours(transcript_df))
+metric_cols[3].metric("Remaining requirements", len(missing_df))
 gpa = transcript_gpa(transcript_df)
-metric_cols[3].metric("Transcript GPA", gpa if gpa is not None else "N/A")
+metric_cols[4].metric("Transcript GPA", gpa if gpa is not None else "N/A")
+st.caption(
+    "UT total hours taken matches the Academic Summary total: "
+    "completed in-residence plus credit-by-exam credits with hours greater than zero. "
+    "Transfer and in-progress lines are excluded."
+)
 
 summary_fig = px.bar(
     audit_result["summary"],

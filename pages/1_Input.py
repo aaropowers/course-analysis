@@ -1,10 +1,48 @@
 from __future__ import annotations
 
+import io
 import pandas as pd
 import streamlit as st
 
 from src.cleaning import build_transcript_from_course_list, parse_transcript
+from src.transcript_pdf import parse_ut_transcript_pdf, to_transcript_dataframe
 from src.utils import load_catalog, load_transcripts, normalize_course_number
+
+
+def _session_transcript_from_pdf(parsed_full_df: pd.DataFrame, parsed_model_df: pd.DataFrame) -> pd.DataFrame:
+    """Keep catalog-valid courses like parse_transcript, but preserve PDF metadata columns.
+
+    When the same course_number appears more than once (e.g. transfer then credit-by-exam),
+    prefer the institutional row (credit_by_exam / completed) over transfer so hours and
+    GPA align with UT totals.
+    """
+    if parsed_model_df.empty:
+        return pd.DataFrame()
+    full = parsed_full_df.copy()
+    full["course_number"] = full["course_number"].map(normalize_course_number)
+    valid_codes = set(parsed_model_df["course_number"])
+
+    status_priority = {"credit_by_exam": 3, "completed": 2, "in_progress": 1, "transfer": 0}
+
+    session_rows: list[dict] = []
+    for code in parsed_model_df["course_number"].drop_duplicates():
+        if code not in valid_codes:
+            continue
+        hits = full[full["course_number"] == code]
+        if hits.empty:
+            continue
+        if "status" in hits.columns:
+            scored = hits.copy()
+            scored["_prio"] = scored["status"].astype(str).str.lower().map(
+                lambda s: status_priority.get(s, 0)
+            )
+            ch = pd.to_numeric(scored.get("credit_hours", pd.Series(0, index=scored.index)), errors="coerce").fillna(0)
+            scored = scored.assign(_ch=ch).sort_values(["_prio", "_ch"], ascending=[False, False])
+            chosen = scored.iloc[0].drop(labels=["_prio", "_ch"], errors="ignore")
+            session_rows.append(chosen.to_dict())
+        else:
+            session_rows.append(hits.iloc[0].to_dict())
+    return pd.DataFrame(session_rows).reset_index(drop=True)
 
 
 st.title("Input")
@@ -40,6 +78,57 @@ with st.expander("Upload transcript CSV", expanded=True):
         if invalid_courses:
             st.warning("Ignored unknown courses: " + ", ".join(invalid_courses))
 
+with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
+    st.caption("Upload an Academic Summary PDF to parse courses, grades, and terms.")
+    uploaded_pdf = st.file_uploader("Upload unofficial transcript", type=["pdf"], key="transcript_pdf_uploader")
+    if uploaded_pdf is not None:
+        parse_result = parse_ut_transcript_pdf(uploaded_pdf)
+        parsed_full_df = to_transcript_dataframe(parse_result)
+        parsed_model_df, invalid_courses = parse_transcript(parsed_full_df[["course_number", "grade", "term"]].copy())
+
+        st.markdown(
+            f"**Parsed rows:** {len(parsed_full_df)} | **Valid catalog matches:** {len(parsed_model_df)} | "
+            f"**Unknown courses:** {len(invalid_courses)}"
+        )
+
+        if parse_result.warnings:
+            with st.expander(f"Parser warnings ({len(parse_result.warnings)})", expanded=False):
+                st.write(parse_result.warnings)
+
+        if invalid_courses:
+            with st.expander("Courses not in current app catalog", expanded=False):
+                st.write(invalid_courses)
+
+        preview_cols = [col for col in ["course_number", "title", "grade", "term", "status"] if col in parsed_full_df.columns]
+        st.dataframe(parsed_full_df[preview_cols].fillna(""), use_container_width=True, hide_index=True)
+
+        full_buffer = io.StringIO()
+        parsed_full_df.to_csv(full_buffer, index=False)
+        st.download_button(
+            "Export CSV (full parsed output)",
+            data=full_buffer.getvalue(),
+            file_name=f"{uploaded_pdf.name.rsplit('.', maxsplit=1)[0]}_parsed_full.csv",
+            mime="text/csv",
+            key="download_full_parsed_csv",
+        )
+
+        model_buffer = io.StringIO()
+        parsed_model_df.to_csv(model_buffer, index=False)
+        st.download_button(
+            "Export CSV (model input format)",
+            data=model_buffer.getvalue(),
+            file_name=f"{uploaded_pdf.name.rsplit('.', maxsplit=1)[0]}_model_input.csv",
+            mime="text/csv",
+            key="download_model_input_csv",
+        )
+
+        if st.button("Use parsed transcript from PDF", type="primary"):
+            session_df = _session_transcript_from_pdf(parsed_full_df, parsed_model_df)
+            st.session_state["transcript_df"] = session_df
+            st.session_state["active_student_id"] = "pdf_uploaded_student"
+            st.session_state["invalid_courses"] = invalid_courses
+            st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
+
 with st.expander("Manual transcript builder", expanded=False):
     selected_courses = st.multiselect(
         "Completed courses",
@@ -70,6 +159,10 @@ st.session_state["target_credit_load"] = st.slider(
 current_transcript = st.session_state.get("transcript_df", pd.DataFrame()).copy()
 if not current_transcript.empty:
     current_transcript["course_number"] = current_transcript["course_number"].map(normalize_course_number)
-    preview = current_transcript[["course_number", "grade", "term"]].fillna("")
+    preview_cols = ["course_number", "grade", "term"]
+    for extra in ("status", "credit_hours"):
+        if extra in current_transcript.columns:
+            preview_cols.append(extra)
+    preview = current_transcript[preview_cols].fillna("")
     st.subheader("Current transcript in session")
     st.dataframe(preview, use_container_width=True, hide_index=True)

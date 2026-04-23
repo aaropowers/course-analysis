@@ -1,9 +1,11 @@
 requirement_id,category,requirement_name,allowed_courses,required_hours,required_flag,recommended_semester
+MATH-0,Math,Calculus I,M408C,4,TRUE,1
 MATH-1,Math,Calculus II,M408D,4,TRUE,1
 MATH-2,Math,Differential Equations and Linear Algebra,M427J,4,TRUE,2
 MATH-3,Math,Applied Advanced Math,M427L,4,TRUE,3
 SCI-1,Science,General Chemistry I,CH301,3,TRUE,1
 COMP-1,Computing,Programming Fundamentals,CS303E,3,TRUE,1
+GEN-0,General Education,Rhetoric and Writing,RHE306,3,TRUE,1
 GEN-1,General Education,Signature Seminar,UGS303,3,TRUE,2
 GEN-2,General Education,Engineering Communication,ES333T,3,TRUE,3
 ME-1,ME Core,Introduction to Engineering Design and Graphics,ME302,3,TRUE,2
@@ -20,10 +22,12 @@ ME-11,ME Core,Heat Transfer,ME339,3,TRUE,5
 ME-12,ME Core,Mechatronics,ME340,3,TRUE,5
 ME-13,ME Core,Dynamic Systems and Controls,ME344,3,TRUE,6
 ME-14,ME Core,Engineering Finance,ME353,3,TRUE,6
+ME-15,ME Core,Mechanical Engineering Design Project,ME266K,2,TRUE,8
 LAB-1,ME Lab,Experimental Fluid Mechanics,ME130L,1,TRUE,4
 LAB-2,ME Lab,Materials Engineering Laboratory,ME134L,1,TRUE,5
 LAB-3,ME Lab,Experimental Heat Transfer,ME139L,1,TRUE,5
 LAB-4,ME Lab,Mechatronics Laboratory,ME140L,1,TRUE,5
 LAB-5,ME Lab,Dynamic Systems and Controls Laboratory,ME144L,1,TRUE,6
+LAB-6,ME Lab,Design Project Laboratory,ME266P,2,TRUE,8
 ELEC-1,Gateway Elective,Gateway Elective A,"ME365D|ME350R|CS327E|ME343|ME337C|ME378E|ME336P|ME337F|ME336|ME349|ME350|ME379N|ME368C|ME371D|ME364L|ME366L|ME369P|ME354M|ME379M",3,TRUE,7
 ELEC-2,Gateway Elective,Gateway Elective B,"ME365D|ME350R|CS327E|ME343|ME337C|ME378E|ME336P|ME337F|ME336|ME349|ME350|ME379N|ME368C|ME371D|ME364L|ME366L|ME369P|ME354M|ME379M",3,TRUE,8

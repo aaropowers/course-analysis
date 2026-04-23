@@ -189,7 +189,66 @@ def term_sort_key(term: str) -> tuple[int, int]:
 
 
 def transcript_gpa(transcript_df: pd.DataFrame) -> float | None:
-    graded = transcript_df.dropna(subset=["grade_points"])
+    graded = transcript_df.dropna(subset=["grade_points"]).copy()
+    # Exclude transfer-credit rows from GPA when status/source metadata exists.
+    if "status" in graded.columns:
+        graded = graded[graded["status"].astype(str).str.lower().ne("transfer")]
+    if "source_type" in graded.columns:
+        graded = graded[graded["source_type"].astype(str).str.lower().ne("transfer")]
     if graded.empty:
         return None
-    return round(float(graded["grade_points"].mean()), 2)
+
+    # Use weighted GPA by credit hours when possible to match transcript-style GPA.
+    if "credit_hours" in graded.columns:
+        credits = pd.to_numeric(graded["credit_hours"], errors="coerce")
+    else:
+        credits = pd.Series(index=graded.index, dtype=float)
+
+    if credits.isna().any() or credits.empty:
+        credit_lookup = load_catalog().set_index("course_number")["credits"].to_dict()
+        fallback = graded["course_number"].map(credit_lookup)
+        credits = credits.fillna(pd.to_numeric(fallback, errors="coerce"))
+
+    weighted = graded.assign(_credits=credits).dropna(subset=["_credits"])
+    weighted = weighted[weighted["_credits"] > 0]
+    if weighted.empty:
+        return round(float(graded["grade_points"].mean()), 2)
+
+    numerator = float((weighted["grade_points"] * weighted["_credits"]).sum())
+    denominator = float(weighted["_credits"].sum())
+    if denominator == 0:
+        return None
+    return round(numerator / denominator, 2)
+
+
+def transcript_completed_hours(transcript_df: pd.DataFrame) -> float:
+    """UT-style \"Total Hours Taken\": sum credits for completed + credit-by-exam only.
+
+    Matches UT Academic Summary practice: transfer credit and in-progress enrollments
+    are not included in this total. Rows with zero credit hours (e.g. some FIG seminars)
+    do not contribute.
+    """
+    if transcript_df.empty:
+        return 0.0
+
+    rows = transcript_df.copy()
+    if "status" in rows.columns:
+        status = rows["status"].astype(str).str.lower()
+        rows = rows[status.isin({"completed", "credit_by_exam"})]
+    if "source_type" in rows.columns:
+        source_type = rows["source_type"].astype(str).str.lower()
+        rows = rows[source_type.ne("transfer")]
+
+    if "credit_hours" in rows.columns:
+        credits = pd.to_numeric(rows["credit_hours"], errors="coerce")
+    else:
+        credits = pd.Series(index=rows.index, dtype=float)
+
+    if credits.isna().any() or credits.empty:
+        credit_lookup = load_catalog().set_index("course_number")["credits"].to_dict()
+        fallback = rows["course_number"].map(credit_lookup)
+        credits = credits.fillna(pd.to_numeric(fallback, errors="coerce"))
+
+    rows = rows.assign(_credits=credits).dropna(subset=["_credits"])
+    rows = rows[rows["_credits"] > 0]
+    return round(float(rows["_credits"].sum()), 1) if not rows.empty else 0.0
