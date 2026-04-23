@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import pandas as pd
 import streamlit as st
@@ -56,6 +57,14 @@ def _save_student_gpa(transcript_df: pd.DataFrame) -> None:
 st.title("Input")
 st.caption("Load one of the prepared demo students, upload a simple CSV, or build a transcript manually.")
 
+# Persist parsed-PDF UI state across page navigation/reruns.
+st.session_state.setdefault("pdf_cache_sig", None)
+st.session_state.setdefault("pdf_cache_name", None)
+st.session_state.setdefault("pdf_cached_full_df", pd.DataFrame())
+st.session_state.setdefault("pdf_cached_model_df", pd.DataFrame())
+st.session_state.setdefault("pdf_cached_invalid_courses", [])
+st.session_state.setdefault("pdf_cached_warnings", [])
+
 catalog_df = load_catalog()
 demo_df = load_transcripts()
 
@@ -93,18 +102,36 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
     st.caption("Upload an Academic Summary PDF to parse courses, grades, and terms.")
     uploaded_pdf = st.file_uploader("Upload unofficial transcript", type=["pdf"], key="transcript_pdf_uploader")
     if uploaded_pdf is not None:
-        parse_result = parse_ut_transcript_pdf(uploaded_pdf)
-        parsed_full_df = to_transcript_dataframe(parse_result)
-        parsed_model_df, invalid_courses = parse_transcript(parsed_full_df[["course_number", "grade", "term"]].copy())
+        pdf_bytes = uploaded_pdf.getvalue()
+        pdf_sig = hashlib.sha1(pdf_bytes).hexdigest()
+        if pdf_sig != st.session_state.get("pdf_cache_sig"):
+            parse_result = parse_ut_transcript_pdf(io.BytesIO(pdf_bytes))
+            parsed_full_df = to_transcript_dataframe(parse_result)
+            parsed_model_df, invalid_courses = parse_transcript(parsed_full_df[["course_number", "grade", "term"]].copy())
+            st.session_state["pdf_cache_sig"] = pdf_sig
+            st.session_state["pdf_cache_name"] = uploaded_pdf.name
+            st.session_state["pdf_cached_full_df"] = parsed_full_df
+            st.session_state["pdf_cached_model_df"] = parsed_model_df
+            st.session_state["pdf_cached_invalid_courses"] = invalid_courses
+            st.session_state["pdf_cached_warnings"] = parse_result.warnings
+            st.success(f"Parsed and cached PDF: {uploaded_pdf.name}")
 
+    parsed_full_df = st.session_state.get("pdf_cached_full_df", pd.DataFrame())
+    parsed_model_df = st.session_state.get("pdf_cached_model_df", pd.DataFrame())
+    invalid_courses = st.session_state.get("pdf_cached_invalid_courses", [])
+    parse_warnings = st.session_state.get("pdf_cached_warnings", [])
+    cached_name = st.session_state.get("pdf_cache_name") or "uploaded_transcript.pdf"
+
+    if not parsed_full_df.empty:
+        st.caption(f"Using cached PDF parse: `{cached_name}`")
         st.markdown(
             f"**Parsed rows:** {len(parsed_full_df)} | **Valid catalog matches:** {len(parsed_model_df)} | "
             f"**Unknown courses:** {len(invalid_courses)}"
         )
 
-        if parse_result.warnings:
-            with st.expander(f"Parser warnings ({len(parse_result.warnings)})", expanded=False):
-                st.write(parse_result.warnings)
+        if parse_warnings:
+            with st.expander(f"Parser warnings ({len(parse_warnings)})", expanded=False):
+                st.write(parse_warnings)
 
         if invalid_courses:
             with st.expander("Courses not in current app catalog", expanded=False):
@@ -118,7 +145,7 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
         st.download_button(
             "Export CSV (full parsed output)",
             data=full_buffer.getvalue(),
-            file_name=f"{uploaded_pdf.name.rsplit('.', maxsplit=1)[0]}_parsed_full.csv",
+            file_name=f"{cached_name.rsplit('.', maxsplit=1)[0]}_parsed_full.csv",
             mime="text/csv",
             key="download_full_parsed_csv",
         )
@@ -128,7 +155,7 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
         st.download_button(
             "Export CSV (model input format)",
             data=model_buffer.getvalue(),
-            file_name=f"{uploaded_pdf.name.rsplit('.', maxsplit=1)[0]}_model_input.csv",
+            file_name=f"{cached_name.rsplit('.', maxsplit=1)[0]}_model_input.csv",
             mime="text/csv",
             key="download_model_input_csv",
         )
@@ -140,6 +167,23 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
             st.session_state["invalid_courses"] = invalid_courses
             _save_student_gpa(session_df)
             st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
+        left, right = st.columns(2)
+        with left:
+            if st.button("Use parsed transcript from PDF", type="primary"):
+                session_df = _session_transcript_from_pdf(parsed_full_df, parsed_model_df)
+                st.session_state["transcript_df"] = session_df
+                st.session_state["active_student_id"] = "pdf_uploaded_student"
+                st.session_state["invalid_courses"] = invalid_courses
+                st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
+        with right:
+            if st.button("Clear cached PDF parse", type="secondary"):
+                st.session_state["pdf_cache_sig"] = None
+                st.session_state["pdf_cache_name"] = None
+                st.session_state["pdf_cached_full_df"] = pd.DataFrame()
+                st.session_state["pdf_cached_model_df"] = pd.DataFrame()
+                st.session_state["pdf_cached_invalid_courses"] = []
+                st.session_state["pdf_cached_warnings"] = []
+                st.rerun()
 
 with st.expander("Manual transcript builder", expanded=False):
     selected_courses = st.multiselect(
@@ -182,4 +226,9 @@ if not current_transcript.empty:
             preview_cols.append(extra)
     preview = current_transcript[[col for col in preview_cols if col in current_transcript.columns]].fillna("")
     st.subheader("Current transcript in session")
+    if st.button("Remove current transcript from session", type="secondary"):
+        st.session_state["transcript_df"] = pd.DataFrame()
+        st.session_state["active_student_id"] = None
+        st.session_state["invalid_courses"] = []
+        st.rerun()
     st.dataframe(preview, use_container_width=True, hide_index=True)
