@@ -522,17 +522,13 @@ metric_cols[1].metric(
     "Degree Plan Hours",
     f"{combined_hours} / {audit_result['total_hours']}",
 )
-metric_cols[2].metric("UT In_Residence hours taken", transcript_completed_hours(transcript_df))
+metric_cols[2].metric("UT In Residence hours taken", transcript_completed_hours(transcript_df))
 metric_cols[3].metric("Remaining requirements", len(missing_df))
 gpa = transcript_gpa(transcript_df)
 metric_cols[4].metric("Transcript GPA", gpa if gpa is not None else "N/A")
 st.caption(
-    f"Progress and Degree Plan Hours include the {audit_result.get('in_progress_hours', 0)} credit "
-    f"hours across {len(audit_result.get('in_progress_courses', []))} in-progress courses so the "
-    "current term counts toward graduation. "
-    "UT In_Residence hours taken still matches the Academic Summary total: "
-    "completed in-residence plus credit-by-exam credits with hours greater than zero. "
-    "Transfer and in-progress lines are excluded from that metric."
+    "NOTE:"
+    "Transfer and in-progress lines are excluded from In Residence Hours"
 )
 
 status_column_order = ["Completed", "In Progress", "Eligible", "Eligible with corequisite", "Locked", "Remaining"]
