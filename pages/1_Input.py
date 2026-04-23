@@ -160,23 +160,17 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
             key="download_model_input_csv",
         )
 
-        if st.button("Use parsed transcript from PDF", type="primary"):
-            session_df = _session_transcript_from_pdf(parsed_full_df, parsed_model_df)
-            st.session_state["transcript_df"] = session_df
-            st.session_state["active_student_id"] = "pdf_uploaded_student"
-            st.session_state["invalid_courses"] = invalid_courses
-            _save_student_gpa(session_df)
-            st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
         left, right = st.columns(2)
         with left:
-            if st.button("Use parsed transcript from PDF", type="primary"):
+            if st.button("Use parsed transcript from PDF", type="primary", key="use_parsed_pdf_transcript"):
                 session_df = _session_transcript_from_pdf(parsed_full_df, parsed_model_df)
                 st.session_state["transcript_df"] = session_df
                 st.session_state["active_student_id"] = "pdf_uploaded_student"
                 st.session_state["invalid_courses"] = invalid_courses
+                _save_student_gpa(session_df)
                 st.success(f"Loaded {len(session_df)} valid completed courses from PDF (with transcript metadata).")
         with right:
-            if st.button("Clear cached PDF parse", type="secondary"):
+            if st.button("Clear cached PDF parse", type="secondary", key="clear_cached_pdf_parse"):
                 st.session_state["pdf_cache_sig"] = None
                 st.session_state["pdf_cache_name"] = None
                 st.session_state["pdf_cached_full_df"] = pd.DataFrame()
