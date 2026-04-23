@@ -148,16 +148,24 @@ def _prereq_status_for_course(
     completed_courses: set[str],
     prereq_df: pd.DataFrame,
     planned_courses: set[str] | None = None,
+    in_progress_courses: set[str] | None = None,
 ) -> tuple[bool, list[str], list[str]]:
     planned_courses = planned_courses or set()
+    in_progress_courses = in_progress_courses or set()
     rows = prereq_df[prereq_df["course_number"] == course_number]
     prereq_rows = rows[rows["prereq_type"] == "PREREQ"]
     coreq_rows = rows[rows["prereq_type"] == "COREQ"]
 
+    future_prereq_satisfiers = completed_courses | in_progress_courses | planned_courses
     missing_prereqs = sorted(
-        set(prereq_rows.loc[~prereq_rows["prerequisite_course"].isin(completed_courses), "prerequisite_course"])
+        set(
+            prereq_rows.loc[
+                ~prereq_rows["prerequisite_course"].isin(future_prereq_satisfiers),
+                "prerequisite_course",
+            ]
+        )
     )
-    available_for_coreq = completed_courses | planned_courses | {course_number}
+    available_for_coreq = completed_courses | in_progress_courses | planned_courses | {course_number}
     missing_coreqs = sorted(
         set(coreq_rows.loc[~coreq_rows["prerequisite_course"].isin(available_for_coreq), "prerequisite_course"])
     )
@@ -175,7 +183,6 @@ def evaluate_course_dependencies(
     completed_courses = _completed_courses(transcript_df)
     in_progress_courses = _in_progress_courses(transcript_df)
     planned_courses = {normalize_course_number(course) for course in (planned_courses or set())}
-    coreq_satisfiers = planned_courses | in_progress_courses
 
     rows = []
     for _, course in catalog_df.iterrows():
@@ -186,7 +193,8 @@ def evaluate_course_dependencies(
             course_number,
             completed_courses,
             prereq_df,
-            planned_courses=coreq_satisfiers,
+            planned_courses=planned_courses,
+            in_progress_courses=in_progress_courses,
         )
 
         if is_completed:

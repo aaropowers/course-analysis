@@ -390,41 +390,15 @@ if recommendations is None or recommendations.empty or not required_evidence_col
     recommendations = recommend_courses(student_profile)
 
 plan_df = build_semester_plan(recommendations, max_credits=int(student_profile["target_credit_load"]))
-
-if plan_df.empty:
-    st.info("No eligible bundle could be assembled for the current profile.")
-    st.stop()
-
-total_credits = int(plan_df["credits"].sum())
-st.metric("Planned credits", total_credits)
-
-st.dataframe(
-    plan_df[
-        [
-            "course_number",
-            "course_title",
-            "credits",
-            "score",
-            "bundle_reason",
-            "evidence_avg_gpa",
-            "evidence_pass_rate",
-            "bundle_top_partner",
-        ]
-    ],
-    use_container_width=True,
-    hide_index=True,
-)
-
-st.subheader("Four-year graduation progression")
 four_year_plan_df = build_remaining_semester_plan(
     student_profile,
     max_credits=int(student_profile["target_credit_load"]),
     final_semester=8,
 )
 
-if four_year_plan_df.empty:
-    st.info("No additional remaining-semester recommendations were generated for this profile.")
-else:
+next_semester_plan = pd.DataFrame()
+remaining_semester_plan = pd.DataFrame()
+if not four_year_plan_df.empty:
     next_semester_plan = four_year_plan_df[
         four_year_plan_df["planner_status"] == "Recommended next semester"
     ].copy()
@@ -432,38 +406,38 @@ else:
         four_year_plan_df["planner_status"] == "Recommended future semester"
     ].copy()
 
-    metric_cols = st.columns(3)
-    metric_cols[0].metric("Recommended future courses", len(four_year_plan_df))
-    metric_cols[1].metric("Planned future credits", int(four_year_plan_df["credits"].sum()))
-    metric_cols[2].metric(
-        "Planned through term",
-        str(four_year_plan_df.sort_values("planned_term_order").iloc[-1]["planned_term_label"]),
-    )
+st.subheader("Four-year graduation progression")
+progression_fig = _build_four_year_flowchart(transcript_df, four_year_plan_df)
+st.plotly_chart(progression_fig, use_container_width=False)
+st.caption(
+    "Actual transcript courses keep the same colors as the Degree Audit transcript view. "
+    "Recommended next-semester and later-semester courses are added as separate legend colors. "
+    "Scroll horizontally if the chart extends past the page."
+)
 
-    progression_fig = _build_four_year_flowchart(transcript_df, four_year_plan_df)
-    st.plotly_chart(progression_fig, use_container_width=False)
-    st.caption(
-        "Actual transcript courses keep the same colors as the Degree Audit transcript view. "
-        "Recommended next-semester and later-semester courses are added as separate legend colors. "
-        "Scroll horizontally if the chart extends past the page."
-    )
+if four_year_plan_df.empty:
+    st.info("No additional remaining-semester recommendations were generated for this profile.")
 
-    st.subheader("Next term recommendations")
+st.subheader("Next term recommendations")
+if next_semester_plan.empty:
+    st.info("No next-term bundle could be assembled for the current profile.")
+else:
     st.dataframe(_planner_summary_table(next_semester_plan), use_container_width=True, hide_index=True)
 
-    st.subheader("Remaining term recommendations")
-    if remaining_semester_plan.empty:
-        st.info("The current next-semester bundle completes the generated plan.")
-    else:
-        st.dataframe(_planner_summary_table(remaining_semester_plan), use_container_width=True, hide_index=True)
+st.subheader("Remaining term recommendations")
+if remaining_semester_plan.empty:
+    st.info("The current next-term bundle completes the generated plan.")
+else:
+    st.dataframe(_planner_summary_table(remaining_semester_plan), use_container_width=True, hide_index=True)
 
-bundle_fig = px.pie(plan_df, names="bundle_reason", values="credits", title="Bundle composition")
-st.plotly_chart(bundle_fig, use_container_width=True)
+if not plan_df.empty:
+    bundle_fig = px.pie(plan_df, names="bundle_reason", values="credits", title="Bundle composition")
+    st.plotly_chart(bundle_fig, use_container_width=True)
 
-st.subheader("Bundle rationale")
-for row in plan_df.itertuples():
-    with st.container(border=True):
-        st.markdown(f"**{row.course_number} - {row.course_title}**")
-        st.write(row.explanation)
-        st.caption(build_plan_evidence_line(row))
-        st.caption(build_bundle_rationale(row))
+    st.subheader("Bundle rationale")
+    for row in plan_df.itertuples():
+        with st.container(border=True):
+            st.markdown(f"**{row.course_number} - {row.course_title}**")
+            st.write(row.explanation)
+            st.caption(build_plan_evidence_line(row))
+            st.caption(build_bundle_rationale(row))
