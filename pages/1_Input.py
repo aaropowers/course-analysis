@@ -150,16 +150,6 @@ with st.expander("Upload unofficial transcript PDF (UT format)", expanded=True):
             key="download_full_parsed_csv",
         )
 
-        model_buffer = io.StringIO()
-        parsed_model_df.to_csv(model_buffer, index=False)
-        st.download_button(
-            "Export CSV (model input format)",
-            data=model_buffer.getvalue(),
-            file_name=f"{cached_name.rsplit('.', maxsplit=1)[0]}_model_input.csv",
-            mime="text/csv",
-            key="download_model_input_csv",
-        )
-
         left, right = st.columns(2)
         with left:
             if st.button("Use parsed transcript from PDF", type="primary", key="use_parsed_pdf_transcript"):
