@@ -1,67 +1,68 @@
 # Mechanical Engineering Course Planner
 
-Streamlit prototype for transcript-aware mechanical engineering course planning. The app helps a student upload or enter completed coursework, audit progress against a curated ME degree plan, view explainable next-course recommendations, build a suggested semester bundle, and explore coursework-backed analytics.
+Transcript-aware Streamlit prototype for planning UT Mechanical Engineering coursework.
+
+The app helps a student:
+
+- load a transcript (demo profile, CSV, manual course picker, or UT Academic Summary PDF)
+- audit degree progress with requirement status detail
+- view explainable course recommendations with predicted GPA ranges
+- generate a graduation roadmap that combines past terms with suggested future terms
+- inspect coursework-backed analytics from a bootstrapped dataset
 
 This is a demo-oriented prototype, not an official advising system.
 
-## What the App Does
+## Current App Pages
 
-- accepts completed coursework by manual entry or CSV upload
-- audits progress against the ME degree plan
-- identifies remaining requirements and locked courses
-- recommends eligible next courses with short explanations
-- suggests a next-semester bundle based on credit load and course fit
-- shows insights from a larger bootstrapped coursework dataset
-
-## App Flow
-
-The Streamlit app is organized into five pages:
+The app is organized into five pages:
 
 1. `Input`
-   Collects completed courses, interests, and target credit load.
+   - Load a demo transcript, upload transcript CSV, or parse a UT-format unofficial transcript PDF.
+   - PDF parsing is cached in session state so users can navigate away and come back without re-uploading.
+   - Export available: `Export CSV (full parsed output)`.
+   - Set interest areas and target credit load used by downstream pages.
 2. `Degree Audit`
-   Maps completed work to the degree plan and shows what is done, remaining, and still locked.
+   - Audits each requirement in `degree_plan.csv` against the active transcript.
+   - Tracks statuses including `Completed`, `In Progress`, `Eligible`, `Eligible with corequisite`, and `Locked`.
+   - Includes both a degree-requirement map and a transcript timeline map.
 3. `Recommendations`
-   Ranks eligible courses and shows evidence-backed recommendation cards.
+   - Ranks eligible courses with explainable signal breakdowns.
+   - Shows predicted GPA ranges and confidence.
+   - Uses recommendation logging via SQLite.
 4. `Semester Planner`
-   Builds a compact suggested bundle while respecting credit load and corequisite handling.
+   - Builds a graduation roadmap from current transcript state to completion.
+   - Supports future-term controls: max credits, optional summer terms, and planning horizon.
+   - Shows unscheduled requirements when constraints prevent placement.
 5. `Insights`
-   Shows coursework-backed analytics such as grade distributions, co-enrollment effects, department GPA heatmaps, and common same-term course pairs.
+   - Analytics views from `coursework_bootstrapped.csv`:
+     grade distributions, co-enrollment effects, department GPA heatmap, and top same-term pairs.
 
 ## High-Level Methodology
 
-The project combines three layers:
+The project combines four layers:
 
 - `Structured degree rules`
-  `degree_plan.csv` and `prereqs.csv` drive the audit, eligibility checks, and requirement tracking.
-- `Hybrid recommendation scoring`
-  Recommendations are ranked with a mix of requirement priority, semester fit, text similarity, co-enrollment patterns, collaborative-style support, and interest alignment.
-- `Coursework-backed evidence`
-  A cleaned and bootstrapped coursework dataset is used for analytics and compact evidence signals such as average GPA, pass rate, common companions, and historical sequencing support.
-
-The ranking model is still lightweight and explainable by design. The goal is a reliable prototype, not a production advising engine.
+  - `degree_plan.csv` + `prereqs.csv` drive audit status and scheduling constraints.
+- `Transcript normalization and parsing`
+  - CSV/manual inputs are normalized through `src.cleaning`.
+  - UT unofficial transcript PDFs are parsed with `pypdf` via `src.transcript_pdf`.
+- `Recommendation scoring`
+  - `src.recommender` ranks courses using requirement priority, timing fit, similarity, co-enrollment, collaborative signals, and interests.
+- `Roadmap scheduling`
+  - `src.semester_planner.build_graduation_roadmap` assigns unmet requirements to future terms with prerequisite/corequisite awareness, credit caps, and unscheduled fallback.
 
 ## Data Pipeline
 
-The coursework data has three stages:
+Coursework data is maintained in stages:
 
 - `coursework.csv`
-  Original raw notebook dataset. This file is kept untouched.
+  Original raw dataset (kept untouched).
 - `data/coursework_cleaned.csv`
-  Cleaned and canonicalized version of the raw dataset.
+  Canonicalized and validated version of raw records.
 - `data/coursework_bootstrapped.csv`
-  Expanded testing dataset used for analytics and evidence-backed insights.
+  Expanded dataset for robust recommendation evidence and insights.
 
-The cleaning and bootstrapping pipeline:
-
-- normalizes course numbers, semesters, grades, and institutions
-- derives `department`
-- forces canonical course titles and descriptions from `data/course_catalog.csv` where available
-- validates tracked prerequisite/corequisite order in student templates
-- bootstraps additional synthetic student histories
-- adds plausible fallback grade distributions for missing degree-plan courses with no observed raw grade history
-
-Rebuild the cleaned and bootstrapped coursework files with:
+Rebuild cleaned/bootstrapped coursework with:
 
 ```bash
 python generate_coursework_dataset.py
@@ -70,38 +71,44 @@ python generate_coursework_dataset.py
 ## Main Data Files
 
 - `data/course_catalog.csv`
-  Canonical course metadata: title, description, department, credits, average GPA proxy, tags, and recommended semester.
+  Canonical course metadata (title, description, credits, tags, recommended semester, etc.).
 - `data/degree_plan.csv`
-  Curated ME requirement map used by the audit engine.
+  Curated ME requirement map used by audit and roadmap logic.
 - `data/prereqs.csv`
-  Simplified prerequisite and corequisite relationships.
+  Prerequisite/corequisite graph.
 - `data/elective_groups.csv`
-  Elective and interest-area grouping support.
+  Elective and interest-area groupings.
 - `data/synthetic_transcripts.csv`
-  Small demo transcript set used by the app for demo profiles and part of the ranking signals.
+  Demo transcript profiles loaded on app start.
 - `data/coursework_bootstrapped.csv`
-  Larger testing dataset used for analytics and recommendation evidence.
+  Expanded coursework records for analytics and evidence.
+- `data/parsed_transcripts/`
+  Example parsed transcript outputs generated during testing/demo.
 
 ## Core Modules
 
 - `app.py`
-  Streamlit entry point.
+  Streamlit entry page and app-level session bootstrapping.
+- `src/transcript_pdf.py`
+  UT Academic Summary PDF parsing and dataframe conversion.
 - `src/cleaning.py`
-  Transcript normalization for app inputs.
+  Transcript normalization for CSV/manual inputs.
 - `src/audit.py`
-  Degree audit, remaining requirements, and eligibility logic.
+  Degree audit logic, requirement status classification, and progression builders.
 - `src/recommender.py`
-  Hybrid recommendation scoring plus evidence-backed explanations.
+  Explainable recommendation scoring and prediction fields.
 - `src/semester_planner.py`
-  Bundle builder for the next semester.
+  Graduation roadmap scheduler and semester planning utilities.
+- `src/plot_utils.py`
+  Shared timeline flowchart rendering for Degree Audit and Semester Planner.
 - `src/features.py`
-  Shared feature engineering and coursework analytics helpers.
+  Coursework feature engineering and analytics helpers.
 - `src/coursework_bootstrap.py`
-  Raw-to-cleaned-to-bootstrapped coursework generation pipeline.
+  Raw-to-cleaned-to-bootstrapped dataset pipeline.
 - `src/utils.py`
-  Central data loaders and normalization helpers.
+  Shared loaders, normalization helpers, GPA/hours utilities, and cache helpers.
 - `src/db.py`
-  SQLite logging for recommendation runs.
+  SQLite initialization and recommendation logging.
 
 ## Running the Project
 
@@ -111,7 +118,7 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run the dashboard:
+Run the app:
 
 ```bash
 streamlit run app.py
@@ -120,7 +127,7 @@ streamlit run app.py
 ## Repository Layout
 
 ```text
-course analysis/
+course-analysis/
 ├── app.py
 ├── README.md
 ├── requirements.txt
@@ -135,7 +142,8 @@ course analysis/
 │   ├── prereqs.csv
 │   ├── elective_groups.csv
 │   ├── synthetic_transcripts.csv
-│   └── demo_upload_template.csv
+│   ├── demo_upload_template.csv
+│   └── parsed_transcripts/
 ├── pages/
 │   ├── 1_Input.py
 │   ├── 2_Degree_Audit.py
@@ -148,15 +156,17 @@ course analysis/
     ├── coursework_bootstrap.py
     ├── db.py
     ├── features.py
+    ├── plot_utils.py
     ├── recommender.py
     ├── semester_planner.py
+    ├── transcript_pdf.py
     ├── utils.py
     └── __init__.py
 ```
 
 ## Important Notes
 
-- The degree map and prerequisite logic are curated for the prototype and may simplify official advising rules.
-- Recommendation outputs are explainable but not guaranteed-optimal.
-- The bootstrapped coursework dataset is useful for testing and demo analytics, but it is not institutional ground truth.
-- The app should be framed as a planning assistant, not a certified advising tool.
+- This app is a planning assistant, not official advising.
+- Degree rules and prerequisite mappings are curated and may simplify registrar/advising edge cases.
+- Recommendation and roadmap outputs are explainable but heuristic; they are not guaranteed-optimal.
+- Bootstrapped coursework data supports testing and demo analytics, but it is not institutional ground truth.
